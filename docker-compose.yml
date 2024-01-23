@@ -1,0 +1,228 @@
+# # version: '3.8'
+
+# # services: 
+# #   postgres:
+# #     image: postgres:latest
+# #     container_name: postgres
+# #     environment:
+# #       POSTGRES_USER: huawei
+# #       POSTGRES_PASSWORD: 1
+# #       POSTGRES_DB: apishop
+# #     ports:
+# #       - "5433:5432"
+
+# #   shop-api:
+# #     build:
+# #       context: .
+# #     ports:
+# #       - "8001:8000"
+# #     depends_on:
+# #       - postgres
+# #     environment:
+# #       DEBUG: "False"
+# #       DB_NAME: "apishop"
+# #       DB_USER: "huawei"
+# #       DB_PASS: "1"
+# #       DB_HOST: "postgres"
+# #       DB_PORT: 5432
+# #       EMAIL_PORT: 587
+# #       EMAIL_USE_TLS: True
+# #       EMAIL_HOST_USER: argen.arzykulov03@gmail.com
+# #       EMAIL_HOST_PASSWORD: dhmgzzjnjktxtkjb  
+  
+# version: '3.8'
+
+# services:
+#   web:
+#     build: .  
+#     command: >
+#       sh -c "gunicorn config.wsgi:application --bind 0.0.0.8000"
+#     volumes:
+#       - .:/usr/src/app/
+#       - static_volume:/usr/src/app/static
+#       - media_volume:/usr/src/app/media
+#     ports:
+#       - "8080:8000"
+#     depends_on:
+#       - postgres
+#       - redis
+#       - migration
+#     container_name: web
+#     networks:
+#       - backend
+
+#   postgres:
+#     image: postgres:latest
+#     container_name: postgres
+#     restart: always
+#     environment:
+#       POSTGRES_USER: huawei
+#       POSTGRES_PASSWORD: 1
+#       POSTGRES_DB: apishop
+#     volumes:
+#       - postgresql_data:/var/lib/postgresql/data
+#     ports:
+#       - "5433:5432"
+#     networks:
+#       - backend
+
+#   migration:
+#     build: .
+#     restart: on-failure
+#     depends_on:
+#       - postgres
+#     command: >
+#       sh -c "python3 manage.py makemigrations &&
+#       python3 manage.py migrate"
+#     volumes:
+#       - .:/usr/src/app/
+#     networks:
+#       - backend
+
+#   celery:
+#     build: .
+#     command: >
+#       sh -c "celery -A config worker -DEBUG &&
+#       celery -A config beat -DEBUG"
+#     volumes:
+#       - .:/usr/src/app/
+#     depends_on:
+#       - web
+#       - redis
+#     networks:
+#       - backend
+
+#   redis:
+#     image: redis
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - backend
+  
+#   nginx:
+#     build: 
+#       context: .
+#       dockerfile: nginx/dockerfile
+#     ports:
+#       - "80:80"
+#     volumes:
+#       - static_volume:/usr/src/app/static
+#       - media_volume:/usr/src/app/media
+#     depends_on:
+#       - web
+#     networks:
+#       - backend
+# volumes:
+#   postgresql_data:
+#   static_volume:
+#   media_volume:
+
+# networks:
+#   backend:
+    
+
+
+version: '3.3'
+
+services:
+  web:
+    build: .
+    command: >
+      sh -c "gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/usr/src/app/
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    # env_file:
+    #   - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+      - migration
+      - redis
+    container_name: web
+    # restart: on-failure
+    networks:
+      - backend
+
+  database:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: apishop
+      POSTGRES_USER: huawei
+      POSTGRES_PASSWORD: 1
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - backend
+
+  # db:
+  #   image: postgres:14
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: huawei
+  #     POSTGRES_PASSWORD: 1
+  #     POSTGRES_DB: apishop
+  #   container_name: db_dev_1
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - backend
+  
+  migration:
+    build: .
+    # restart: on-failure
+    command: >
+      sh -c "python3 manage.py makemigrations &&
+              python3 manage.py migrate"
+    volumes: 
+      - .:/usr/src/app/
+    depends_on:
+      - database
+    networks:
+      - backend
+
+  celery:
+    build: .
+    command: celery -A config worker -l INFO
+    volumes: 
+      - .:/usr/src/app/
+    depends_on:
+      - web
+      - redis
+    networks:
+      - backend
+
+  redis:
+    image: redis
+    ports:
+      - "6378:6379"
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    depends_on:
+      - web
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  backend:
+    
